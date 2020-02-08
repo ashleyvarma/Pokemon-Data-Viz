@@ -32,14 +32,13 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-// // add the tooltip area to the webpage
+// add the tooltip area to the webpage
 var tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
 // tooltip mouseover event handler
 var tipMouseover = function(d) {
-    // var color = colorScale(d["Type 1"]);
     var html  = d["Name"] + "<br/>" + "<b>" + d["Type 1"] + "<br/>" + "<b>" + d["Type 2"] + "<br/>";
 
     tooltip.html(html)
@@ -66,6 +65,7 @@ let filter1Text = d3.select('body')
 
 let filter1 = d3.select('body')
     .append('select')
+    .attr('id',"legendary")  
     .selectAll('option')    
     .data(legendary)
     .enter()
@@ -77,12 +77,15 @@ let filter1 = d3.select('body')
             return d 
         })
 
+    filter1 = d3.select("#legendary")
+
 let filter2Text = d3.select('body')
     .append('h1')
     .text("Generation (group)");
 
 let filter2 = d3.select('body')
-    .append('select')   
+    .append('select')
+    .attr('id', "gen")   
     .selectAll('option')
     .data(generations)
     .enter()
@@ -90,26 +93,21 @@ let filter2 = d3.select('body')
         .html(function(d) { return d })
         .attr('value', function(d) { return d })
 
+    filter2 = d3.select("#gen")
+
 // load data
 d3.csv("pokemon.csv", function(error, data) {
-    // // List of groups (here I have one group per column)
-    // var legendaryMap = d3.map(data, function(d){return(d["Legendary"])}).keys()
-    // // console.log(legendaryMap);
-
-    // // List of groups (here I have one group per column)
-    // var generationMap = d3.map(data, function(d){return(d["Generation"])}).keys()
-    // // console.log(generationMap);
     // change string (from CSV) into number format
     data.forEach(function(d) {
         d["Sp. Def"] = +d["Sp. Def"];
         d["Total"] = +d["Total"];
         //console.log(d);
     });
-
     drawScatterPlot(data);
 });
 
 function drawScatterPlot(data) {
+
     // don't want dots overlapping axis, so add in buffer to data domain
     xScale.domain([d3.min(data, xValue)-10, d3.max(data, xValue)+10]);
     yScale.domain([d3.min(data, yValue)-10, d3.max(data, yValue)+20]);
@@ -174,50 +172,57 @@ function drawScatterPlot(data) {
         .style("text-anchor", "end")
         .text(function(d) { return d;})
 }
-
-    // A function that update the chart
-    function updateFilters(filterLegendary, filterGeneration) {
-        if(filterLegendary.value()==="(All)" && filterGeneration.value()==="(All)") {
-            drawScatterPlot("pokemon.csv")
-        }
-        // Create new data with the selection?
-        var dataFilter = data.filter(function(d){return d["Legendary"]==filterLegendary.value()})
-        dataFilter = data.filter(function(d){return d["Generation"]==filterGeneration.value()})
   
-        // Give these new data to update scatterplot
-        drawScatterPlot(dataFilter)
-      }
-  
-      // When the button is changed, run the updateChart function
-      d3.select(filter1).on("change", function(d) {
-          // recover the option that has been chosen
-          var selectedLegendary = d3.select(this).property("value")
-          // run the updateChart function with this selected option
-          updateFilters(selectedLegendary)
-      })
+      // Update value when the button is changed
+      d3.select("#legendary").on("change", update)
+      d3.select("#gen").on("change", update)
 
-      // When the button is changed, run the updateChart function
-      d3.select(filter2).on("change", function(d) {
-        // recover the option that has been chosen
-        var selectedGen = d3.select(this).property("value")
-        // run the updateChart function with this selected option
-        updateFilters(selectedGen)
-    })
+    function update() {
+        let getFilter1 = document.getElementById("legendary")
+        let getFilter2 = document.getElementById("gen")
 
-    // const colors = [
-    //     {"Bug": "#4E79A7"},
-    //     {"Dark": "#A0CBE8"},
-    //     {"Electric": "#F28E2B"},
-    //     {"Fairy": "#FFBE7D"},
-    //     {"Fighting": "#59A14F"},
-    //     {"Fire": "#8CD17D"},
-    //     {"Ghost": "#B6992D"},
-    //     {"Grass": "#499894"},
-    //     {"Ground": "#86BCB6"},
-    //     {"Ice": "#FABFD2"},
-    //     {"Normal": "#E15759"},
-    //     {"Poison": "#FF9D9A"},
-    //     {"Psychic": "#79706E"},
-    //     {"Steel": "#BAB0AC"},
-    //     {"Water": "#D37295"}
-    // ]
+        let filtervalue1 = getFilter1.options[getFilter1.selectedIndex].value
+        let filtervalue2 = getFilter2.options[getFilter2.selectedIndex].value
+
+        if (filtervalue1 === "(All)" && filtervalue2 === "(All)") {
+            svg.selectAll("*").remove();
+            d3.csv("pokemon.csv", function(data) {
+                data.forEach(function(d) {
+                    d["Sp. Def"] = +d["Sp. Def"];
+                    d["Total"] = +d["Total"];
+                });
+                drawScatterPlot(data);
+            });
+        } else if (filtervalue1 === "(All)" && !(filtervalue2 === "(All)")) {
+            svg.selectAll("*").remove();
+            d3.csv("pokemon.csv", function(data) {
+                data.forEach(function(d) {
+                    d["Sp. Def"] = +d["Sp. Def"];
+                    d["Total"] = +d["Total"];
+                });
+                data.filter(function(d, filtervalue2) {return d["Generation"] == filtervalue2})
+                drawScatterPlot(data.filter(function(d) {return d["Generation"] == filtervalue2}))
+            });
+        } else if(filtervalue2==="(All)" && !(filtervalue1 === "(All)")) {
+            svg.selectAll("*").remove();
+            d3.csv("pokemon.csv", function(data) {
+                data.forEach(function(d) {
+                    d["Sp. Def"] = +d["Sp. Def"];
+                    d["Total"] = +d["Total"];
+                });
+                data.filter(function(d, filtervalue1) {return d["Legendary"] == filtervalue1})
+                drawScatterPlot(data.filter(function(d) {return d["Legendary"] == filtervalue1}))
+            });
+        } else {
+            svg.selectAll("*").remove();
+            d3.csv("pokemon.csv", function(data) {
+                data.forEach(function(d) {
+                    d["Sp. Def"] = +d["Sp. Def"];
+                    d["Total"] = +d["Total"];
+                });
+                data.filter(function(d, filtervalue1) {return d["Legendary"] == filtervalue1})
+                data.filter(function(d, filtervalue2) {return d["Generation"] == filtervalue2})
+                drawScatterPlot(data.filter(function(d) {return d["Legendary"] == filtervalue1 && d["Generation"] == filtervalue2}))
+            });
+        }        
+    }
